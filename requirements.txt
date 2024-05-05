@@ -2,6 +2,8 @@
 -e .
 
 # external requirements
+pandas
+holoviews
 click
 Sphinx
 coverage
