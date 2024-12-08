@@ -2,8 +2,14 @@
 -e .
 
 # external requirements
+google-search-results
 pandas
-holoviews
+snorkel
+duckdb
+delta
+delta-spark
+deltalake
+pyspark
 click
 Sphinx
 coverage

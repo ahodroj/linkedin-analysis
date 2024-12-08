@@ -1,28 +1,66 @@
 import itertools
 import pandas as pd
 import json
+import pyspark.sql.functions as F
+
+def create_invitations_table(spark):
+  """
+  Creates the delta table for invitations
+  From,To,Sent At,Message,Direction,inviterProfileUrl,inviteeProfileUrl
+  """
+  
+  invitations = spark.read.option("header", "true").csv("s3a://raw/linkedin/Invitations.csv")
+  invitations = spark.read.option("header", "true").csv("s3a://raw/linkedin/Invitations.csv")
+  invitations = invitations.withColumnRenamed("From", "sender")\
+                          .withColumnRenamed("To", "recipient")\
+                          .withColumnRenamed("Sent At", "sent_at")\
+                          .withColumnRenamed("Message", "message")\
+                          .withColumnRenamed("Direction", "direction")\
+                          .withColumnRenamed("inviterProfileUrl", "sender_profile_url")\
+                          .withColumnRenamed("inviteeProfileUrl", "recipient_profile_url")
+  
+  invitations.write.format("delta").mode("overwrite").save("s3a://processed/linkedin/invitations")
+
+def create_messages_table(spark):
+  """
+  Creates the delta table for messages
+  """
+  messages = spark.read.option("header", "true").csv("s3a://raw/linkedin/messages.csv")
+  messages = messages.drop('CONVERSATION ID')
+
+  messages = messages.withColumnRenamed("CONVERSATION TITLE", "conversation_title")\
+    .withColumnRenamed("FROM", "sender")\
+    .withColumnRenamed("SENDER PROFILE URL", "sender_profile_url")\
+    .withColumnRenamed("RECIPIENT PROFILE URLS", "recipient_profile_url")\
+    .withColumnRenamed("SUBJECT", "subject")\
+    .withColumnRenamed("CONTENT", "content")\
+    .withColumnRenamed("FOLDER", "folder")\
+    .withColumnRenamed("TO", "recipient")\
+    .withColumnRenamed("DATE", "date")
 
 
-# Create a pandas dataframe from a csv file with scraped data
-def create_df_from_scraped_profiles(csvpath):
-  df = pd.read_csv(csvpath)
-  comps = get_companies(df)
-  cdf = pd.DataFrame(comps, columns = ['current', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6'])
-  final = pd.concat([df.drop(['comp'], axis=1), cdf], axis=1)
-  return final
+  messages.write.format("delta").mode("overwrite").save("s3a://processed/linkedin/messages")
+  
+def create_connections_table(spark):
+  """
+    Creates the delta table for connections 
+  """
+  
+  df = spark.read \
+    .option("header", "true") \
+    .csv('s3a://raw/linkedin/Connections.csv')
+ 
+  df = df.withColumnRenamed("First Name", "first_name")\
+    .withColumnRenamed("Last Name", "last_name")\
+    .withColumnRenamed("Email Address", "email")\
+    .withColumnRenamed("Company", "company")\
+    .withColumnRenamed("Position", "position")\
+    .withColumnRenamed("Connected On", "connected_on")\
+    .withColumnRenamed("URL", "profile_url")
+  
+  df = df.withColumn(
+    "full_name",
+    F.concat("first_name", F.lit(" "), "last_name")
+  )
 
-# flatten list 
-def flatten_list(nested_list):
-    return list(itertools.chain(*nested_list))
-
-# convert json webscraper logs json dump into list of lists
-def get_companies(data, column_name='comp', reverse_sequence=False):
-  c = []
-  for v in data[column_name]:
-    j = json.loads(v)
-    p = list(filter(lambda x: len(x) > 0, [c['comp-alt'].replace(" logo", "") for c in j]))
-    if reverse_sequence:
-      p = p[::-1]
-    if len(p) > 0:
-      c.append(p)
-  return c
+  df.write.format("delta").mode("overwrite").save("s3a://processed/linkedin/connections")

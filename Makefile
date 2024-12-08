@@ -9,6 +9,7 @@ REMOTE_PATH = /Data/linkedin
 REMOTE_DRIVE = google
 PROJECT_NAME = linkedin-analysis
 PYTHON_INTERPRETER = python3
+SPARK_SUBMIT = spark-submit
 
 ifeq (,$(shell which conda))
 HAS_CONDA=False
@@ -40,7 +41,7 @@ lint:
 
 ## Download data files into from remote drive
 copy_data:
-	rclone copyto $(REMOTE_DRIVE):$(REMOTE_PATH) data/
+	rclone copyto $(REMOTE_DRIVE):$(REMOTE_PATH) data/raw
 
 ## Sync data/ files with remote drive
 sync_data:
@@ -60,7 +61,7 @@ endif
 else
 	$(PYTHON_INTERPRETER) -m pip install -q virtualenv virtualenvwrapper
 	@echo ">>> Installing virtualenvwrapper if not already installed.\nMake sure the following lines are in shell startup file\n\
-	export WORKON_HOME=$$HOME/.virtualenvs\nexport PROJECT_HOME=$$HOME/Devel\nsource /usr/local/bin/virtualenvwrapper.sh\n"
+	export WORKON_HOME=$$HOME/.virtualenvs\nexport PROJECT_HOME=$$HOME/src\nsource /usr/local/bin/virtualenvwrapper.sh\n"
 	@bash -c "source `which virtualenvwrapper.sh`;mkvirtualenv $(PROJECT_NAME) --python=$(PYTHON_INTERPRETER)"
 	@echo ">>> New virtualenv created. Activate with:\nworkon $(PROJECT_NAME)"
 endif
